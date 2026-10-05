@@ -2,12 +2,23 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { formatNaira } from '@/lib/tier'
-import type { Prize, Winner } from '@/lib/types'
+import type { Prize } from '@/lib/types'
 import { Button, Card, EmptyState, Stat } from '@/components/UI'
 
 interface DrawResult {
   winner_id: string
   ticket_id: string
+}
+
+interface WinnerRow {
+  id: string
+  prize_id: string
+  prize_name: string
+  prize_value: number | null
+  ticket_code: string
+  ticket_type: string
+  drawn_at: string
+  claim_status: string
 }
 
 export function DrawPage() {
@@ -16,8 +27,11 @@ export function DrawPage() {
 
   const prizes = useQuery({
     queryKey: ['prizes'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('prizes').select('*').order('value', { ascending: false })
+    queryFn: async (): Promise<Prize[]> => {
+      const { data, error } = await supabase
+        .from('prizes')
+        .select('*')
+        .order('value', { ascending: false })
       if (error) throw error
       return (data ?? []) as Prize[]
     },
@@ -25,13 +39,36 @@ export function DrawPage() {
 
   const winners = useQuery({
     queryKey: ['winners'],
-    queryFn: async () => {
+    queryFn: async (): Promise<WinnerRow[]> => {
       const { data, error } = await supabase
         .from('winners')
-        .select('*, prizes(name, value), tickets(ticket_code, type, receipt_id)')
+        .select('id, prize_id, drawn_at, claim_status, prizes(name, value), tickets(ticket_code, type)')
         .order('drawn_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as Winner[]
+
+      return (data ?? []).map((w) => {
+        const rawPrize = (w as { prizes?: unknown }).prizes
+        const rawTicket = (w as { tickets?: unknown }).tickets
+
+        const prize = Array.isArray(rawPrize)
+          ? (rawPrize[0] as { name?: string; value?: number } | undefined)
+          : (rawPrize as { name?: string; value?: number } | null)
+
+        const ticket = Array.isArray(rawTicket)
+          ? (rawTicket[0] as { ticket_code?: string; type?: string } | undefined)
+          : (rawTicket as { ticket_code?: string; type?: string } | null)
+
+        return {
+          id: String(w.id),
+          prize_id: String(w.prize_id),
+          prize_name: prize?.name ?? '—',
+          prize_value: prize?.value ?? null,
+          ticket_code: ticket?.ticket_code ?? '—',
+          ticket_type: ticket?.type ?? '—',
+          drawn_at: String(w.drawn_at),
+          claim_status: String(w.claim_status),
+        }
+      })
     },
   })
 
@@ -137,9 +174,9 @@ export function DrawPage() {
             <tbody>
               {winners.data.map((w) => (
                 <tr key={w.id} className="border-b border-gray-50">
-                  <td className="py-2">{w.prizes?.name}</td>
-                  <td className="py-2 font-mono">{w.tickets?.ticket_code}</td>
-                  <td className="py-2 uppercase text-xs">{w.tickets?.type}</td>
+                  <td className="py-2">{w.prize_name}</td>
+                  <td className="py-2 font-mono">{w.ticket_code}</td>
+                  <td className="py-2 uppercase text-xs">{w.ticket_type}</td>
                   <td className="py-2">{new Date(w.drawn_at).toLocaleString()}</td>
                   <td className="py-2 capitalize">{w.claim_status}</td>
                 </tr>
