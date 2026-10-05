@@ -1,4 +1,9 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
+import { forwardRef } from 'react'
+import type {
+  ButtonHTMLAttributes,
+  InputHTMLAttributes,
+  ReactNode,
+} from 'react'
 
 export function Button({
   children,
@@ -23,34 +28,57 @@ export function Button({
   )
 }
 
-export function Input({
-  label,
-  error,
-  className = '',
-  ...props
-}: InputHTMLAttributes<HTMLInputElement> & { label?: string; error?: string }) {
+export const Input = forwardRef<
+  HTMLInputElement,
+  InputHTMLAttributes<HTMLInputElement> & { label?: string; error?: string }
+>(function Input({ label, error, className = '', ...props }, ref) {
   return (
     <div className="w-full">
-      {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
+      {label && (
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {label}
+        </label>
+      )}
       <input
+        ref={ref}
         className={`w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none disabled:bg-gray-50 ${className}`}
         {...props}
       />
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   )
-}
+})
 
-export function Card({ title, children, className = '' }: { title?: string; children: ReactNode; className?: string }) {
+export function Card({
+  title,
+  children,
+  className = '',
+}: {
+  title?: string
+  children: ReactNode
+  className?: string
+}) {
   return (
     <div className={`bg-white rounded-xl shadow-sm border border-gray-100 ${className}`}>
-      {title && <div className="px-5 py-3 border-b border-gray-100 font-semibold text-gray-800">{title}</div>}
+      {title && (
+        <div className="px-5 py-3 border-b border-gray-100 font-semibold text-gray-800">
+          {title}
+        </div>
+      )}
       <div className="p-5">{children}</div>
     </div>
   )
 }
 
-export function Stat({ label, value, tone = 'default' }: { label: string; value: ReactNode; tone?: 'default' | 'success' | 'warning' | 'danger' }) {
+export function Stat({
+  label,
+  value,
+  tone = 'default',
+}: {
+  label: string
+  value: ReactNode
+  tone?: 'default' | 'success' | 'warning' | 'danger'
+}) {
   const toneClass = {
     default: 'text-gray-900',
     success: 'text-green-600',
@@ -65,7 +93,13 @@ export function Stat({ label, value, tone = 'default' }: { label: string; value:
   )
 }
 
-export function Badge({ children, tone = 'default' }: { children: ReactNode; tone?: 'default' | 'success' | 'warning' | 'danger' | 'info' }) {
+export function Badge({
+  children,
+  tone = 'default',
+}: {
+  children: ReactNode
+  tone?: 'default' | 'success' | 'warning' | 'danger' | 'info'
+}) {
   const styles = {
     default: 'bg-gray-100 text-gray-700',
     success: 'bg-green-100 text-green-700',
@@ -73,11 +107,19 @@ export function Badge({ children, tone = 'default' }: { children: ReactNode; ton
     danger: 'bg-red-100 text-red-700',
     info: 'bg-blue-100 text-blue-700',
   }[tone]
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${styles}`}>{children}</span>
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${styles}`}
+    >
+      {children}
+    </span>
+  )
 }
 
 export function Spinner() {
-  return <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+  return (
+    <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+  )
 }
 
 export function EmptyState({ message }: { message: string }) {
