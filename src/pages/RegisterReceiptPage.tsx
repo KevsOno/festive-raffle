@@ -25,7 +25,8 @@ type Form = z.infer<typeof schema>
 interface RegisterResult {
   receipt_id: string
   participant_id: string
-  codes: string[]
+  ticket_code: string
+  tier_label: string
 }
 
 export function RegisterReceiptPage() {
@@ -94,29 +95,28 @@ export function RegisterReceiptPage() {
   if (result) {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
-        <Card title="✅ Tickets Issued">
+        <Card title="✅ Ticket Issued">
           <div className="space-y-4">
             <div className="text-sm text-gray-500">
               Receipt {form.getValues('receipt_no')}
             </div>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="text-xs uppercase text-gray-500 mb-2">Ticket Codes</div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 font-mono text-sm">
-                {result.codes.map((c) => (
-                  <div
-                    key={c}
-                    className="bg-white rounded border border-gray-200 px-3 py-2"
-                  >
-                    {c}
-                  </div>
-                ))}
+
+            <div className="bg-brand-light rounded-lg p-6 text-center">
+              <div className="text-xs uppercase text-brand/70 mb-1">
+                {result.tier_label} · Your Ticket
+              </div>
+              <div className="font-mono text-2xl font-bold text-brand tracking-wider">
+                {result.ticket_code}
+              </div>
+              <div className="text-xs text-brand/70 mt-2">
+                Keep this code safe. You will need it to claim prizes.
               </div>
             </div>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
               <div className="font-medium mb-1">Tell the customer</div>
               <div>
-                They can check their tickets at{' '}
+                They can check their ticket at{' '}
                 <span className="font-mono">rafflefiesta.netlify.app/portal</span>{' '}
                 using their phone number and the PIN they just entered.
               </div>
@@ -133,11 +133,9 @@ export function RegisterReceiptPage() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => {
-                  navigator.clipboard.writeText(result.codes.join('\n'))
-                }}
+                onClick={() => navigator.clipboard.writeText(result.ticket_code)}
               >
-                Copy Codes
+                Copy Code
               </Button>
             </div>
           </div>
@@ -247,8 +245,8 @@ export function RegisterReceiptPage() {
                 className="w-full"
               >
                 {mutation.isPending
-                  ? 'Issuing tickets…'
-                  : 'Confirm & Issue Tickets'}
+                  ? 'Issuing ticket…'
+                  : 'Confirm & Issue Ticket'}
               </Button>
             </form>
           </Card>
