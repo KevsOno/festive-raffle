@@ -10,6 +10,8 @@ import { ReturnsPage } from '@/pages/ReturnsPage'
 import { ReconciliationPage } from '@/pages/ReconciliationPage'
 import { DrawPage } from '@/pages/DrawPage'
 import { ExportPage } from '@/pages/ExportPage'
+import { CustomerLoginPage } from '@/pages/CustomerLoginPage'
+import { CustomerTicketsPage } from '@/pages/CustomerTicketsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,6 +30,8 @@ export function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/portal" element={<CustomerLoginPage />} />
+            <Route path="/portal/tickets" element={<CustomerTicketsPage />} />
 
             <Route element={<AuthGuard />}>
               <Route element={<Layout />}>
