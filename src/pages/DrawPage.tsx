@@ -15,6 +15,7 @@ interface WinnerRow {
   prize_id: string
   prize_name: string
   prize_value: number | null
+  tier_label: string | null
   ticket_code: string
   ticket_type: string
   drawn_at: string
@@ -30,10 +31,16 @@ export function DrawPage() {
     queryFn: async (): Promise<Prize[]> => {
       const { data, error } = await supabase
         .from('prizes')
-        .select('*')
+        .select('*, tiers(label)')
         .order('value', { ascending: false })
       if (error) throw error
-      return (data ?? []) as Prize[]
+      return (data ?? []).map((p) => {
+        const rawTier = (p as { tiers?: unknown }).tiers
+        const tier = Array.isArray(rawTier)
+          ? (rawTier[0] as { label?: string } | undefined)
+          : (rawTier as { label?: string } | null)
+        return { ...p, tier_label: tier?.label ?? null } as Prize
+      })
     },
   })
 
@@ -42,7 +49,9 @@ export function DrawPage() {
     queryFn: async (): Promise<WinnerRow[]> => {
       const { data, error } = await supabase
         .from('winners')
-        .select('id, prize_id, drawn_at, claim_status, prizes(name, value), tickets(ticket_code, type)')
+        .select(
+          'id, prize_id, drawn_at, claim_status, prizes(name, value, tiers(label)), tickets(ticket_code, type)'
+        )
         .order('drawn_at', { ascending: false })
       if (error) throw error
 
@@ -51,8 +60,17 @@ export function DrawPage() {
         const rawTicket = (w as { tickets?: unknown }).tickets
 
         const prize = Array.isArray(rawPrize)
-          ? (rawPrize[0] as { name?: string; value?: number } | undefined)
-          : (rawPrize as { name?: string; value?: number } | null)
+          ? (rawPrize[0] as
+              | { name?: string; value?: number; tiers?: unknown }
+              | undefined)
+          : (rawPrize as
+              | { name?: string; value?: number; tiers?: unknown }
+              | null)
+
+        const rawTier = prize?.tiers
+        const tier = Array.isArray(rawTier)
+          ? (rawTier[0] as { label?: string } | undefined)
+          : (rawTier as { label?: string } | null)
 
         const ticket = Array.isArray(rawTicket)
           ? (rawTicket[0] as { ticket_code?: string; type?: string } | undefined)
@@ -63,6 +81,7 @@ export function DrawPage() {
           prize_id: String(w.prize_id),
           prize_name: prize?.name ?? '—',
           prize_value: prize?.value ?? null,
+          tier_label: tier?.label ?? null,
           ticket_code: ticket?.ticket_code ?? '—',
           ticket_type: ticket?.type ?? '—',
           drawn_at: String(w.drawn_at),
@@ -136,9 +155,10 @@ export function DrawPage() {
                 >
                   <div>
                     <div className="font-medium">{prize.name}</div>
-                    {prize.value && (
-                      <div className="text-sm text-gray-500">{formatNaira(prize.value)}</div>
-                    )}
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {prize.tier_label ?? 'No tier'} ·{' '}
+                      {prize.value ? formatNaira(prize.value) : '—'}
+                    </div>
                   </div>
                   <Button
                     disabled={alreadyWon || runDraw.isPending || !eligibleCount.data}
@@ -165,6 +185,7 @@ export function DrawPage() {
             <thead>
               <tr className="text-left text-gray-500 border-b border-gray-100">
                 <th className="py-2">Prize</th>
+                <th className="py-2">Tier</th>
                 <th className="py-2">Ticket</th>
                 <th className="py-2">Type</th>
                 <th className="py-2">Drawn At</th>
@@ -175,6 +196,7 @@ export function DrawPage() {
               {winners.data.map((w) => (
                 <tr key={w.id} className="border-b border-gray-50">
                   <td className="py-2">{w.prize_name}</td>
+                  <td className="py-2 text-xs text-gray-500">{w.tier_label ?? '—'}</td>
                   <td className="py-2 font-mono">{w.ticket_code}</td>
                   <td className="py-2 uppercase text-xs">{w.ticket_type}</td>
                   <td className="py-2">{new Date(w.drawn_at).toLocaleString()}</td>
