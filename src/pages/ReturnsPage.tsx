@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -22,6 +23,14 @@ interface ProcessResult {
   remaining: number
 }
 
+interface RecentReturnRow {
+  id: string
+  return_ref: string
+  return_amount: number
+  status: string
+  receipt_no: string
+}
+
 export function ReturnsPage() {
   const qc = useQueryClient()
   const [lookup, setLookup] = useState('')
@@ -35,14 +44,28 @@ export function ReturnsPage() {
 
   const recentReturns = useQuery({
     queryKey: ['returns-recent'],
-    queryFn: async () => {
+    queryFn: async (): Promise<RecentReturnRow[]> => {
       const { data, error } = await supabase
         .from('returns')
         .select('*, receipts(receipt_no, amount)')
         .order('created_at', { ascending: false })
         .limit(20)
       if (error) throw error
-      return data ?? []
+
+      return (data ?? []).map((r) => {
+        const joined = (r as { receipts?: unknown }).receipts
+        const receiptNo = Array.isArray(joined)
+          ? (joined[0] as { receipt_no?: string } | undefined)?.receipt_no ?? '—'
+          : (joined as { receipt_no?: string } | null)?.receipt_no ?? '—'
+
+        return {
+          id: String(r.id),
+          return_ref: String(r.return_ref),
+          return_amount: Number(r.return_amount),
+          status: String(r.status),
+          receipt_no: receiptNo,
+        }
+      })
     },
   })
 
@@ -180,7 +203,11 @@ export function ReturnsPage() {
                 <Row label="Net" value={formatNaira(Number(receipt.net_amount))} />
                 <Row
                   label="Status"
-                  value={<Badge tone={receipt.status === 'active' ? 'success' : 'warning'}>{receipt.status}</Badge>}
+                  value={
+                    <Badge tone={receipt.status === 'active' ? 'success' : 'warning'}>
+                      {receipt.status}
+                    </Badge>
+                  }
                 />
               </div>
             </Card>
@@ -205,8 +232,8 @@ export function ReturnsPage() {
               {recentReturns.data.map((r) => (
                 <tr key={r.id} className="border-b border-gray-50">
                   <td className="py-2 font-mono">{r.return_ref}</td>
-                  <td className="py-2 font-mono">{r.receipts?.receipt_no}</td>
-                  <td className="py-2">{formatNaira(Number(r.return_amount))}</td>
+                  <td className="py-2 font-mono">{r.receipt_no}</td>
+                  <td className="py-2">{formatNaira(r.return_amount)}</td>
                   <td className="py-2 capitalize">{r.status}</td>
                 </tr>
               ))}
@@ -218,7 +245,7 @@ export function ReturnsPage() {
   )
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-center justify-between">
       <span className="text-gray-500">{label}</span>
