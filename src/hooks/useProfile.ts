@@ -6,6 +6,8 @@ export function useProfile(userId: string | undefined) {
   return useQuery({
     queryKey: ['profile', userId],
     enabled: !!userId,
+    staleTime: 5 * 60_000,      // consider fresh for 5 minutes
+    gcTime: 30 * 60_000,        // keep in cache for 30 minutes
     queryFn: async (): Promise<Profile | null> => {
       const { data, error } = await supabase
         .from('user_profiles')
