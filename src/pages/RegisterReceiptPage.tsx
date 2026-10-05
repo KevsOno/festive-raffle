@@ -27,6 +27,7 @@ interface RegisterResult {
   participant_id: string
   ticket_code: string
   tier_label: string
+  tier_id: number
 }
 
 export function RegisterReceiptPage() {
@@ -133,7 +134,9 @@ export function RegisterReceiptPage() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => navigator.clipboard.writeText(result.ticket_code)}
+                onClick={() =>
+                  navigator.clipboard.writeText(result.ticket_code)
+                }
               >
                 Copy Code
               </Button>
@@ -263,7 +266,7 @@ export function RegisterReceiptPage() {
                   : 'Enter an amount of ₦200,000 or more.'}
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="text-center bg-brand-light rounded-lg py-4">
                   <div className="text-xs uppercase text-brand/70">{tier.label}</div>
                   <div className="text-2xl font-bold text-brand mt-1">
@@ -274,23 +277,17 @@ export function RegisterReceiptPage() {
                     )}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Standard Tickets</span>
-                    <Badge tone="info">{tier.standard_tickets}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span>VIP Grand Entry</span>
-                    <Badge tone={tier.vip_tickets > 0 ? 'success' : 'default'}>
-                      {tier.vip_tickets}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between text-sm pt-3 border-t border-gray-100">
-                    <span className="font-medium">Total</span>
-                    <span className="font-bold text-brand">
-                      {tier.standard_tickets + tier.vip_tickets}
-                    </span>
-                  </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <span>Your Ticket</span>
+                  <Badge tone={tier.label === 'Tier 6' ? 'success' : 'info'}>
+                    {tier.label === 'Tier 6' ? 'VIP' : 'Standard'}
+                  </Badge>
+                </div>
+
+                <div className="flex items-center justify-between text-sm pt-3 border-t border-gray-100">
+                  <span className="font-medium">Prize Pool</span>
+                  <span className="font-medium text-brand">{tier.label}</span>
                 </div>
               </div>
             )}
