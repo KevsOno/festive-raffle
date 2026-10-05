@@ -12,7 +12,6 @@ interface DrawResult {
 
 export function DrawPage() {
   const qc = useQueryClient()
-  const [selectedPrize, setSelectedPrize] = useState<string | null>(null)
   const [lastResult, setLastResult] = useState<DrawResult | null>(null)
 
   const prizes = useQuery({
@@ -107,7 +106,6 @@ export function DrawPage() {
                   <Button
                     disabled={alreadyWon || runDraw.isPending || !eligibleCount.data}
                     onClick={() => {
-                      setSelectedPrize(prize.id)
                       if (confirm(`Run draw for "${prize.name}"? This cannot be undone.`)) {
                         runDraw.mutate(prize.id)
                       }
