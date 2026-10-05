@@ -64,6 +64,12 @@ export function LoginPage() {
         <p className="text-center text-xs text-white/50 mt-6">
           Authorized staff only · All actions are logged
         </p>
+        <p className="text-center text-xs text-white/50 mt-6">
+          Are you a customer?{' '}
+          <a href="/portal" className="underline text-white/80">
+            Check your tickets
+          </a>
+        </p>
       </div>
     </div>
   )
