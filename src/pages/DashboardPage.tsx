@@ -11,10 +11,16 @@ export function DashboardPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('receipts')
-        .select('amount, net_amount, status, branch_id, branches(name)')
+        .select('amount, net_amount, status, branch_id, branches!branch_id(name)')
         .gte('registered_at', today)
       if (error) throw error
-      return data ?? []
+      return (data ?? []) as Array<{
+        amount: number
+        net_amount: number
+        status: string
+        branch_id: string
+        branches: { name: string } | null
+      }>
     },
   })
 
