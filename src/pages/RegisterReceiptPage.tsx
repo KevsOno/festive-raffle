@@ -11,12 +11,12 @@ import type { Branch } from '@/lib/types'
 import { Badge, Button, Card, Input } from '@/components/UI'
 
 const schema = z.object({
-  receipt_no: z.string().min(1, 'Receipt number is required').transform((s) => s.trim()),
+  receipt_no: z.string().min(1, 'Receipt number is required'),
   amount: z
     .number({ invalid_type_error: 'Enter a valid amount' })
     .min(200000, 'Minimum is ₦200,000'),
-  customer_name: z.string().min(2, 'Name is required').transform((s) => s.trim()),
-  customer_phone: z.string().min(10, 'Phone is required').transform((s) => s.trim()),
+  customer_name: z.string().min(2, 'Name is required'),
+  customer_phone: z.string().min(10, 'Phone is required'),
   pin: z.string().regex(/^\d{6}$/, 'PIN must be exactly 6 digits'),
 })
 
@@ -44,7 +44,6 @@ export function RegisterReceiptPage() {
     },
   })
 
-  // Decide which branch this registration belongs to
   useEffect(() => {
     if (branchId) return
     if (profile?.branch_id) {
@@ -75,10 +74,10 @@ export function RegisterReceiptPage() {
     mutationFn: async (data: Form) => {
       if (!branchId) throw new Error('Please select a branch first')
       const { data: res, error } = await supabase.rpc('register_receipt', {
-        p_receipt_no: data.receipt_no,
+        p_receipt_no: data.receipt_no.trim(),
         p_amount: data.amount,
-        p_customer_name: data.customer_name,
-        p_customer_phone: data.customer_phone,
+        p_customer_name: data.customer_name.trim(),
+        p_customer_phone: data.customer_phone.trim(),
         p_branch_id: branchId,
         p_pin: data.pin,
       })
@@ -118,8 +117,8 @@ export function RegisterReceiptPage() {
               <div className="font-medium mb-1">Tell the customer</div>
               <div>
                 They can check their tickets at{' '}
-                <span className="font-mono">rafflefiesta.netlify.app/portal</span> using
-                their phone number and the PIN they just entered.
+                <span className="font-mono">rafflefiesta.netlify.app/portal</span>{' '}
+                using their phone number and the PIN they just entered.
               </div>
             </div>
 
@@ -155,7 +154,8 @@ export function RegisterReceiptPage() {
         <h1 className="text-2xl font-bold text-gray-900">Register Receipt</h1>
         <p className="text-sm text-gray-500">
           {branchLocked
-            ? branches?.find((b) => b.id === profile.branch_id)?.name ?? 'Loading branch…'
+            ? branches?.find((b) => b.id === profile.branch_id)?.name ??
+              'Loading branch…'
             : 'Head office — select branch for this registration'}
         </p>
       </div>
@@ -246,7 +246,9 @@ export function RegisterReceiptPage() {
                 disabled={mutation.isPending || !branchId}
                 className="w-full"
               >
-                {mutation.isPending ? 'Issuing tickets…' : 'Confirm & Issue Tickets'}
+                {mutation.isPending
+                  ? 'Issuing tickets…'
+                  : 'Confirm & Issue Tickets'}
               </Button>
             </form>
           </Card>
@@ -256,7 +258,9 @@ export function RegisterReceiptPage() {
           <Card title="Entitlement Preview">
             {!tier ? (
               <div className="text-sm text-gray-500">
-                {typeof amount === 'number' && !Number.isNaN(amount) && amount >= 200000
+                {typeof amount === 'number' &&
+                !Number.isNaN(amount) &&
+                amount >= 200000
                   ? 'Calculating…'
                   : 'Enter an amount of ₦200,000 or more.'}
               </div>
@@ -266,7 +270,9 @@ export function RegisterReceiptPage() {
                   <div className="text-xs uppercase text-brand/70">{tier.label}</div>
                   <div className="text-2xl font-bold text-brand mt-1">
                     {formatNaira(
-                      typeof amount === 'number' && !Number.isNaN(amount) ? amount : 0
+                      typeof amount === 'number' && !Number.isNaN(amount)
+                        ? amount
+                        : 0
                     )}
                   </div>
                 </div>
