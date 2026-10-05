@@ -15,6 +15,7 @@ const schema = z.object({
   amount: z.coerce.number().min(200000, 'Minimum is ₦200,000'),
   customer_name: z.string().min(2, 'Name is required'),
   customer_phone: z.string().min(10, 'Phone is required'),
+  pin: z.string().regex(/^\d{6}$/, 'PIN must be 6 digits'),
 })
 
 type Form = z.infer<typeof schema>
@@ -41,7 +42,13 @@ export function RegisterReceiptPage() {
 
   const form = useForm<Form>({
     resolver: zodResolver(schema),
-    defaultValues: { receipt_no: '', amount: 200000, customer_name: '', customer_phone: '' },
+    defaultValues: {
+      receipt_no: '',
+      amount: 200000,
+      customer_name: '',
+      customer_phone: '',
+      pin: '',
+    },
   })
 
   const amount = form.watch('amount')
@@ -56,6 +63,7 @@ export function RegisterReceiptPage() {
         p_customer_name: data.customer_name,
         p_customer_phone: data.customer_phone,
         p_branch_id: profile.branch_id,
+        p_pin: data.pin,
       })
       if (error) throw error
       return res as RegisterResult
@@ -150,6 +158,20 @@ export function RegisterReceiptPage() {
                 error={form.formState.errors.customer_phone?.message}
                 placeholder="0803 456 7890"
               />
+              <Input
+                label="Customer PIN (6 digits) *"
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="••••••"
+                {...form.register('pin')}
+                error={form.formState.errors.pin?.message}
+                className="text-center text-xl tracking-[0.5em] font-mono"
+              />
+              <p className="text-xs text-gray-500 -mt-2">
+                Customer enters their own 6-digit PIN. They will use this to view tickets later at
+                {' '}<span className="font-mono">rafflefiesta.netlify.app/portal</span>
+              </p>
               {mutation.isError && (
                 <p className="text-sm text-red-600">
                   {mutation.error instanceof Error ? mutation.error.message : 'Failed'}
