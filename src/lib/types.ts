@@ -84,6 +84,8 @@ export interface Prize {
   value: number | null
   quantity: number
   branch_id: string | null
+  tier_id: number | null
+  tier_label?: string | null
 }
 
 export interface Winner {
