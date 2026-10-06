@@ -12,25 +12,17 @@ import { Badge, Button, Card, Input } from '@/components/UI'
 
 type Mode = 'new' | 'existing'
 
-const baseSchema = z.object({
+const schema = z.object({
   receipt_no: z.string().min(1, 'Receipt number is required'),
   amount: z
     .number({ invalid_type_error: 'Enter a valid amount' })
     .min(200000, 'Minimum is ₦200,000'),
-})
-
-const newCustomerSchema = baseSchema.extend({
-  customer_name: z.string().min(2, 'Name is required'),
   customer_phone: z.string().min(10, 'Phone is required'),
-  pin: z.string().regex(/^\d{6}$/, 'PIN must be exactly 6 digits'),
+  customer_name: z.string().optional(),
+  pin: z.string().optional(),
 })
 
-const existingCustomerSchema = baseSchema.extend({
-  customer_phone: z.string().min(10, 'Phone is required'),
-})
-
-type NewForm = z.infer<typeof newCustomerSchema>
-type ExistingForm = z.infer<typeof existingCustomerSchema>
+type Form = z.infer<typeof schema>
 
 interface RegisterResult {
   receipt_id: string
@@ -73,18 +65,18 @@ export function RegisterReceiptPage() {
     else if (branches && branches.length > 0) setBranchId(branches[0].id)
   }, [profile, branches, branchId])
 
-  const newForm = useForm<NewForm>({
-    resolver: zodResolver(newCustomerSchema),
-    defaultValues: { receipt_no: '', amount: 200000, customer_name: '', customer_phone: '', pin: '' },
+  const form = useForm<Form>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      receipt_no: '',
+      amount: 200000,
+      customer_phone: '',
+      customer_name: '',
+      pin: '',
+    },
   })
 
-  const existingForm = useForm<ExistingForm>({
-    resolver: zodResolver(existingCustomerSchema),
-    defaultValues: { receipt_no: '', amount: 200000, customer_phone: '' },
-  })
-
-  const activeForm = mode === 'new' ? newForm : existingForm
-  const amount = activeForm.watch('amount') as number
+  const amount = form.watch('amount')
   const tier = useMemo(() => {
     const n = typeof amount === 'number' && !Number.isNaN(amount) ? amount : 0
     return findTier(n)
@@ -93,7 +85,7 @@ export function RegisterReceiptPage() {
   const doLookup = async () => {
     setLookupError('')
     setLookup(null)
-    const phone = existingForm.getValues('customer_phone')
+    const phone = form.getValues('customer_phone')
     if (!phone || phone.length < 10) {
       setLookupError('Enter a phone number first')
       return
@@ -115,34 +107,41 @@ export function RegisterReceiptPage() {
   }
 
   const mutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (data: Form) => {
       if (!branchId) throw new Error('Select a branch first')
 
       if (mode === 'new') {
-        const d = newForm.getValues()
-        const { data, error } = await supabase.rpc('register_receipt', {
-          p_receipt_no: d.receipt_no.trim(),
-          p_amount: d.amount,
-          p_customer_phone: d.customer_phone.trim(),
+        // Manual validation for new-customer fields
+        if (!data.customer_name || data.customer_name.trim().length < 2) {
+          throw new Error('Customer name is required')
+        }
+        if (!data.pin || !/^\d{6}$/.test(data.pin)) {
+          throw new Error('PIN must be exactly 6 digits')
+        }
+
+        const { data: res, error } = await supabase.rpc('register_receipt', {
+          p_receipt_no: data.receipt_no.trim(),
+          p_amount: data.amount,
+          p_customer_phone: data.customer_phone.trim(),
           p_branch_id: branchId,
           p_mode: 'new',
-          p_customer_name: d.customer_name.trim(),
-          p_pin: d.pin,
+          p_customer_name: data.customer_name.trim(),
+          p_pin: data.pin,
         })
         if (error) throw error
-        return data as RegisterResult
+        return res as RegisterResult
       } else {
         if (!lookup?.found) throw new Error('Look up an existing customer first')
-        const d = existingForm.getValues()
-        const { data, error } = await supabase.rpc('register_receipt', {
-          p_receipt_no: d.receipt_no.trim(),
-          p_amount: d.amount,
-          p_customer_phone: d.customer_phone.trim(),
+
+        const { data: res, error } = await supabase.rpc('register_receipt', {
+          p_receipt_no: data.receipt_no.trim(),
+          p_amount: data.amount,
+          p_customer_phone: data.customer_phone.trim(),
           p_branch_id: branchId,
           p_mode: 'existing',
         })
         if (error) throw error
-        return data as RegisterResult
+        return res as RegisterResult
       }
     },
     onSuccess: (res) => {
@@ -156,9 +155,14 @@ export function RegisterReceiptPage() {
     setResult(null)
     setLookup(null)
     setLookupError('')
-    newForm.reset()
-    existingForm.reset()
+    form.reset()
     setMode('new')
+  }
+
+  const switchMode = (next: Mode) => {
+    setMode(next)
+    setLookup(null)
+    setLookupError('')
   }
 
   if (result) {
@@ -167,7 +171,7 @@ export function RegisterReceiptPage() {
         <Card title="✅ Ticket Issued">
           <div className="space-y-4">
             <div className="text-sm text-gray-500">
-              Receipt {mode === 'new' ? newForm.getValues('receipt_no') : existingForm.getValues('receipt_no')}
+              Receipt {form.getValues('receipt_no')}
             </div>
 
             <div className="bg-brand-light rounded-lg p-6 text-center">
@@ -208,8 +212,7 @@ export function RegisterReceiptPage() {
   }
 
   const branchLocked = !!profile?.branch_id
-  const form = activeForm
-  const errors = (form.formState.errors as Record<string, { message?: string }>)
+  const errors = form.formState.errors as Record<string, { message?: string } | undefined>
 
   return (
     <div className="max-w-4xl">
@@ -224,11 +227,10 @@ export function RegisterReceiptPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div className="lg:col-span-2 space-y-4">
-          {/* Mode toggle */}
           <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-lg">
             <button
               type="button"
-              onClick={() => { setMode('new'); setLookup(null); setLookupError('') }}
+              onClick={() => switchMode('new')}
               className={`py-2.5 rounded-md text-sm font-medium transition ${
                 mode === 'new' ? 'bg-white shadow-sm text-brand' : 'text-gray-600'
               }`}
@@ -237,7 +239,7 @@ export function RegisterReceiptPage() {
             </button>
             <button
               type="button"
-              onClick={() => { setMode('existing'); setLookup(null); setLookupError('') }}
+              onClick={() => switchMode('existing')}
               className={`py-2.5 rounded-md text-sm font-medium transition ${
                 mode === 'existing' ? 'bg-white shadow-sm text-brand' : 'text-gray-600'
               }`}
@@ -249,11 +251,13 @@ export function RegisterReceiptPage() {
           <Card>
             <form
               className="space-y-4"
-              onSubmit={form.handleSubmit(() => mutation.mutate())}
+              onSubmit={form.handleSubmit((d) => mutation.mutate(d))}
             >
               {!branchLocked && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Branch *
+                  </label>
                   <select
                     required
                     value={branchId}
@@ -289,14 +293,14 @@ export function RegisterReceiptPage() {
                 <>
                   <Input
                     label="Customer Name *"
-                    {...newForm.register('customer_name')}
+                    {...form.register('customer_name')}
                     error={errors.customer_name?.message}
                   />
                   <Input
                     label="Customer Phone *"
                     type="tel"
                     inputMode="tel"
-                    {...newForm.register('customer_phone')}
+                    {...form.register('customer_phone')}
                     error={errors.customer_phone?.message}
                     placeholder="0803 456 7890"
                   />
@@ -306,7 +310,7 @@ export function RegisterReceiptPage() {
                     inputMode="numeric"
                     maxLength={6}
                     placeholder="••••••"
-                    {...newForm.register('pin')}
+                    {...form.register('pin')}
                     error={errors.pin?.message}
                     className="text-center text-xl tracking-[0.5em] font-mono"
                   />
@@ -322,12 +326,17 @@ export function RegisterReceiptPage() {
                         label="Customer Phone *"
                         type="tel"
                         inputMode="tel"
-                        {...existingForm.register('customer_phone')}
+                        {...form.register('customer_phone')}
                         error={errors.customer_phone?.message}
                         placeholder="0803 456 7890"
                       />
                     </div>
-                    <Button type="button" variant="outline" onClick={doLookup} className="sm:mb-0.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={doLookup}
+                      className="sm:mb-0.5"
+                    >
                       Look Up
                     </Button>
                   </div>
